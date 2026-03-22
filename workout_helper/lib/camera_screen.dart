@@ -5,10 +5,10 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 
-import 'package:workout_helper/plank_analyzer.dart';
-import 'package:workout_helper/pose_input.dart';
-import 'package:workout_helper/squat_analyzer.dart';
-import 'package:workout_helper/pose_painter.dart';
+import 'package:cathlete/plank_analyzer.dart';
+import 'package:cathlete/pose_input.dart';
+import 'package:cathlete/squat_analyzer.dart';
+import 'package:cathlete/pose_painter.dart';
 
 enum CameraExercise { squat, plank }
 

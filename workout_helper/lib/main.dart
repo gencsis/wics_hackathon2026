@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'app_colors.dart';
 
-import 'package:workout_helper/camera_screen.dart';
+import 'package:cathlete/camera_screen.dart';
 
 void main() {
   runApp(const CathleteApp());

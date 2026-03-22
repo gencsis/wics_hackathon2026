@@ -1,4 +1,4 @@
-name: workout_helper
+name: cathlete
 description: A new Flutter project.
 
 environment:
@@ -28,7 +28,7 @@ flutter_launcher_icons:
   android: true
   ios: true
 
-  image_path: 'assets/images/icon_app.png'
+  image_path: 'assets/images/app_icon2.png'
 
   #adaptive_icon_background: '#FF8A3D'
   #adaptive_icon_foreground: 'assets/images/app_icon.png'
