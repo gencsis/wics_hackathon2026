@@ -1,18 +1,23 @@
 import 'dart:io';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 
+import 'package:workout_helper/plank_analyzer.dart';
 import 'package:workout_helper/pose_input.dart';
 import 'package:workout_helper/squat_analyzer.dart';
 import 'package:workout_helper/pose_painter.dart';
 
+
+enum Exercise { squat, plank }
+
 // CameraScreen
 //   - Camera lifecycle
-//   - Pass frames to PoseInputConverter and PoseDetector
-//   - Pass detected poses to SquatAnalyzer
-//   - Render camera preview, pose skeleton, and debugging containers
+//   - Frame → ML Kit input conversion
+//   - Routing detected poses to the correct analyzer
+//   - Rendering the camera preview, skeleton overlay, and stats HUD
 
 class CameraScreen extends StatefulWidget {
   const CameraScreen({super.key});
@@ -23,30 +28,38 @@ class CameraScreen extends StatefulWidget {
 
 class _CameraScreenState extends State<CameraScreen> {
   CameraController? _camera;
-  bool  _cameraReady = false;
-  Size  _imageSize   = Size.zero;
+  bool _cameraReady = false;
+  Size _imageSize   = Size.zero;
 
+  final _audioPlayer = AudioPlayer();
   final _detector = PoseDetector(
     options: PoseDetectorOptions(
       mode: PoseDetectionMode.stream,
       model: PoseDetectionModel.accurate,
     ),
   );
-
   bool     _busy      = false;
   DateTime _lastFrame = DateTime.fromMillisecondsSinceEpoch(0);
 
   static const _frameInterval = Duration(milliseconds: 100);
 
-  final _analyzer = SquatAnalyzer();
+  final _squatAnalyzer = SquatAnalyzer();
+  final _plankAnalyzer = PlankAnalyzer();
 
+  Exercise _exercise = Exercise.squat;
 
-  // avoids rebuilding CameraPreview
-  SquatResult _result = const SquatResult(
+  SquatResult _squatResult = const SquatResult(
     stage: SquatStage.notReady,
     kneeAngle: 0,
     reps: 0,
     repJustCompleted: false,
+  );
+  PlankResult _plankResult = const PlankResult(
+    stage: PlankStage.notReady,
+    bodyAngle: 0,
+    deviation: 0,
+    holdDuration: Duration.zero,
+    holdJustStarted: false,
   );
   Pose? _pose;
 
@@ -60,6 +73,7 @@ class _CameraScreenState extends State<CameraScreen> {
 
   @override
   void dispose() {
+    _audioPlayer.dispose();
     _camera?.stopImageStream();
     _camera?.dispose();
     _detector.close();
@@ -106,24 +120,44 @@ class _CameraScreenState extends State<CameraScreen> {
 
       if (poses.isEmpty) {
         _pose = null;
-        _result = SquatResult(
-          stage: SquatStage.notReady,
-          kneeAngle: 0,
-          reps: _result.reps,
-          repJustCompleted: false,
-        );
+
+        _squatAnalyzer.reset();
+        _plankAnalyzer.reset();
         _notifier.value++;
         return;
       }
 
-      _pose   = poses.first;
-      _result = _analyzer.update(_pose!);
+      _pose = poses.first;
+
+      switch (_exercise) {
+        case Exercise.squat:
+          _squatResult = _squatAnalyzer.update(_pose!);
+          if (_squatResult.repJustCompleted) {
+            _audioPlayer.play(AssetSource('assets/correct.m4a'));
+          }
+
+        case Exercise.plank:
+          final prev2 = _plankResult;
+          _plankResult = _plankAnalyzer.update(_pose!);
+          if (prev2.stage == PlankStage.holding &&
+              _plankResult.stage == PlankStage.notReady) {
+            _audioPlayer.play(AssetSource('assets/incorrect.mp3'));
+          }
+      }
+
       _notifier.value++;
     } catch (e) {
       debugPrint('Frame error: $e');
     } finally {
       _busy = false;
     }
+  }
+
+  void _switchExercise(Exercise exercise) {
+    if (_exercise == exercise) return;
+    _squatAnalyzer.reset();
+    _plankAnalyzer.reset();
+    setState(() => _exercise = exercise);
   }
 
   @override
@@ -161,11 +195,28 @@ class _CameraScreenState extends State<CameraScreen> {
                       ),
                     ),
                   ),
+
+                // Stats HUD at the bottom
                 Positioned(
                   bottom: 40,
                   left: 20,
                   right: 20,
-                  child: _StatsHud(result: _result),
+                  child: _exercise == Exercise.squat
+                      ? _SquatHud(result: _squatResult)
+                      : _PlankHud(result: _plankResult),
+                ),
+
+                SafeArea(
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: _ExerciseToggle(
+                        current: _exercise,
+                        onSelect: _switchExercise,
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -176,28 +227,97 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 }
 
-//knee angle and reps containers
-class _StatsHud extends StatelessWidget {
-  final SquatResult result;
+// knee angle and reps
 
-  const _StatsHud({required this.result});
+class _SquatHud extends StatelessWidget {
+  final SquatResult result;
+  const _SquatHud({required this.result});
 
   @override
   Widget build(BuildContext context) {
+    final ready = result.stage != SquatStage.notReady;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         _StatCard(
           label: 'KNEE ANGLE',
-          value: result.stage == SquatStage.notReady
-              ? '--'
-              : '${result.kneeAngle.toInt()}°',
+          value: ready ? '${result.kneeAngle.toInt()}°' : '--',
         ),
         _StatCard(
           label: 'REPS',
           value: '${result.reps}',
         ),
       ],
+    );
+  }
+}
+
+//body angle
+class _PlankHud extends StatelessWidget {
+  final PlankResult result;
+  const _PlankHud({required this.result});
+
+  @override
+  Widget build(BuildContext context) {
+    final holding = result.stage == PlankStage.holding;
+    final seconds = result.holdDuration.inSeconds;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        _StatCard(
+          label: 'BODY ANGLE',
+          value: result.stage == PlankStage.notReady
+              ? '--'
+              : '${result.deviation.toInt()}° off',
+        ),
+        _StatCard(
+          label: 'HOLD',
+          value: holding ? '${seconds}s' : '--',
+        ),
+      ],
+    );
+  }
+}
+
+class _ExerciseToggle extends StatelessWidget {
+  final Exercise           current;
+  final ValueChanged<Exercise> onSelect;
+
+  const _ExerciseToggle({required this.current, required this.onSelect});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: Exercise.values.map((ex) {
+        final selected = current == ex;
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 6),
+          child: GestureDetector(
+            onTap: () => onSelect(ex),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
+              decoration: BoxDecoration(
+                color: selected ? Colors.white : Colors.black.withOpacity(0.60),
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(
+                    color: selected ? Colors.white : Colors.white38),
+              ),
+              child: Text(
+                ex.name.toUpperCase(),
+                style: TextStyle(
+                  color: selected ? Colors.black : Colors.white70,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }
@@ -233,7 +353,7 @@ class _StatCard extends StatelessWidget {
             value,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 32,
+              fontSize: 28,
               fontWeight: FontWeight.bold,
             ),
           ),
