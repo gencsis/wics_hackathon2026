@@ -14,7 +14,7 @@ class RecentsScreen extends StatelessWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('recents'),
+        title: const Text('Recents'),
       ),
       body: ListView.builder(
         padding: const EdgeInsets.all(16),

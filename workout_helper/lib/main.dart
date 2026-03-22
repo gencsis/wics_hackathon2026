@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
 import 'app_colors.dart';
-
 import 'package:cathlete/camera_screen.dart';
 
 void main() {
