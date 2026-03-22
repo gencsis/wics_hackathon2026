@@ -4,33 +4,18 @@ import 'dart:ui' show Offset;
 
 import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 
-// =============================================================================
-// PlankStage
-//
-// Stages advance in this order only:
-//   notReady → settling → holding → (lost) → notReady
-//
-// "Settling" is a short stabilisation window before the hold is confirmed.
-// This prevents a single good frame from immediately triggering a hold.
-// The hold duration (seconds) is tracked and exposed in PlankResult.
-//
-// There are no reps for a plank — the metric is hold duration instead.
-// =============================================================================
 
 enum PlankStage {
   notReady, // landmarks missing, confidence too low, or body line too far off
-  settling, // body line is good — waiting for stabilisation frames before confirming
+  settling, // body line is good, waiting for stabilisation frames before confirming
   holding,  // hold confirmed and actively being timed
 }
 
-// =============================================================================
-// PlankResult — returned every frame, consumed only by the UI
-// =============================================================================
 
 class PlankResult {
   final PlankStage stage;
-  final double     bodyAngle;     // smoothed shoulder–hip–ankle angle, degrees
-  final double     deviation;     // abs(180 - bodyAngle) — how far off straight
+  final double     bodyAngle;     // smoothed shoulder–hip–ankle angle
+  final double     deviation;     // how far off straight
   final Duration   holdDuration;  // how long the current hold has lasted
   final bool       holdJustStarted; // true only on the frame holding begins
 
@@ -43,44 +28,29 @@ class PlankResult {
   });
 }
 
-// =============================================================================
-// PlankAnalyzer
-//
+
 // Mirrors SquatAnalyzer exactly in structure.
-// The measured angle is the body-line angle: shoulder → hip → ankle.
-// A perfect plank = 180°. We measure deviation from 180° rather than
-// the raw angle so the threshold is intuitive (e.g. within 15° of straight).
-// =============================================================================
 
 class PlankAnalyzer {
-  // ── Thresholds ────────────────────────────────────────────────────────────────
-  // Body line must be within this many degrees of 180° to count as good form.
+  // Thresholds
   static const double _goodDeviationThreshold = 15.0;
-  // Body line must worsen past this before the hold is broken.
-  // The gap between good and break thresholds acts as hysteresis —
-  // minor wobbles don't break the hold immediately.
+
   static const double _breakDeviationThreshold = 25.0;
 
-  // Number of consecutive good frames required before a hold is confirmed.
-  // At ~10 fps this is roughly 0.5 s of stable position before we start timing.
   static const int _settlingFrames = 5;
 
-  // ── Confidence ───────────────────────────────────────────────────────────────
-  // Shared with SquatAnalyzer so the skeleton painter uses one value.
   static const double minConfidence = 0.65;
-  // Max difference between left and right body-line angles.
+
   static const double _maxSideDiff  = 20.0;
 
-  // ── Smoothing ────────────────────────────────────────────────────────────────
+  // Smoothing
   static const int _smoothingWindow = 5;
   final _angleHistory = Queue<double>();
 
-  // ── State ────────────────────────────────────────────────────────────────────
+  // State
   PlankStage _stage         = PlankStage.notReady;
   int        _settlingCount = 0;
   DateTime?  _holdStart;
-
-  // ── Public API ───────────────────────────────────────────────────────────────
 
   PlankResult update(Pose pose) {
     if (!_landmarksReady(pose)) {
@@ -104,8 +74,7 @@ class PlankAnalyzer {
 
   void reset() => _reset();
 
-  // ── Landmark validation ───────────────────────────────────────────────────────
-
+  // validation
   static const _required = [
     PoseLandmarkType.leftShoulder,
     PoseLandmarkType.leftHip,
@@ -120,9 +89,6 @@ class PlankAnalyzer {
     return lm != null && lm.likelihood >= minConfidence;
   });
 
-  // ── Bilateral body-line angle ─────────────────────────────────────────────────
-  // Computes shoulder→hip→ankle for both sides and averages them.
-  // Returns null if the two sides disagree too much.
 
   double? _bilateralBodyAngle(Pose pose) {
     final left = _angleAt(
@@ -139,8 +105,7 @@ class PlankAnalyzer {
     return (left + right) / 2.0;
   }
 
-  // ── Angle math ────────────────────────────────────────────────────────────────
-
+  // math for angle
   double _angleAt(PoseLandmark a, PoseLandmark b, PoseLandmark c) {
     final ab = Offset(a.x - b.x, a.y - b.y);
     final cb = Offset(c.x - b.x, c.y - b.y);
@@ -151,7 +116,6 @@ class PlankAnalyzer {
     return math.acos((dot / mag).clamp(-1.0, 1.0)) * 180 / math.pi;
   }
 
-  // ── Smoothing ─────────────────────────────────────────────────────────────────
 
   void _pushAngle(double angle) {
     _angleHistory.addLast(angle);
@@ -163,8 +127,7 @@ class PlankAnalyzer {
     return _angleHistory.reduce((a, b) => a + b) / _angleHistory.length;
   }
 
-  // ── State machine ─────────────────────────────────────────────────────────────
-
+  // state machine
   bool _advance(double deviation) {
     var holdJustStarted = false;
 
@@ -179,31 +142,25 @@ class PlankAnalyzer {
         if (deviation <= _goodDeviationThreshold) {
           _settlingCount++;
           if (_settlingCount >= _settlingFrames) {
-            // Enough consecutive good frames — confirm the hold
             _stage     = PlankStage.holding;
             _holdStart = DateTime.now();
             holdJustStarted = true;
           }
         } else {
-          // Wobbled before stabilising — restart the settling count
           _stage         = PlankStage.notReady;
           _settlingCount = 0;
         }
 
       case PlankStage.holding:
         if (deviation > _breakDeviationThreshold) {
-          // Form has broken — end the hold, reset fully
           _reset();
         }
-    // If form is slightly off (_goodDeviationThreshold < deviation <= _breakDeviationThreshold)
-    // we stay in holding but keep timing. The hysteresis gap handles minor wobbles.
     }
 
     return holdJustStarted;
   }
 
-  // ── Helpers ───────────────────────────────────────────────────────────────────
-
+  // helpers
   void _reset() {
     _stage         = PlankStage.notReady;
     _settlingCount = 0;

@@ -10,17 +10,12 @@ import 'package:workout_helper/pose_input.dart';
 import 'package:workout_helper/squat_analyzer.dart';
 import 'package:workout_helper/pose_painter.dart';
 
-
-enum Exercise { squat, plank }
-
-// CameraScreen
-//   - Camera lifecycle
-//   - Frame → ML Kit input conversion
-//   - Routing detected poses to the correct analyzer
-//   - Rendering the camera preview, skeleton overlay, and stats HUD
+enum CameraExercise { squat, plank }
 
 class CameraScreen extends StatefulWidget {
-  const CameraScreen({super.key});
+  final CameraExercise exercise;
+
+  const CameraScreen({super.key, required this.exercise});
 
   @override
   State<CameraScreen> createState() => _CameraScreenState();
@@ -32,6 +27,7 @@ class _CameraScreenState extends State<CameraScreen> {
   Size _imageSize   = Size.zero;
 
   final _audioPlayer = AudioPlayer();
+
   final _detector = PoseDetector(
     options: PoseDetectorOptions(
       mode: PoseDetectionMode.stream,
@@ -40,14 +36,12 @@ class _CameraScreenState extends State<CameraScreen> {
   );
   bool     _busy      = false;
   DateTime _lastFrame = DateTime.fromMillisecondsSinceEpoch(0);
-
   static const _frameInterval = Duration(milliseconds: 100);
 
   final _squatAnalyzer = SquatAnalyzer();
   final _plankAnalyzer = PlankAnalyzer();
 
-  Exercise _exercise = Exercise.squat;
-
+  // Display state
   SquatResult _squatResult = const SquatResult(
     stage: SquatStage.notReady,
     kneeAngle: 0,
@@ -80,6 +74,7 @@ class _CameraScreenState extends State<CameraScreen> {
     _notifier.dispose();
     super.dispose();
   }
+
 
   Future<void> _initCamera() async {
     final cameras = await availableCameras();
@@ -120,7 +115,6 @@ class _CameraScreenState extends State<CameraScreen> {
 
       if (poses.isEmpty) {
         _pose = null;
-
         _squatAnalyzer.reset();
         _plankAnalyzer.reset();
         _notifier.value++;
@@ -129,17 +123,27 @@ class _CameraScreenState extends State<CameraScreen> {
 
       _pose = poses.first;
 
-      switch (_exercise) {
-        case Exercise.squat:
+      switch (widget.exercise) {
+        case CameraExercise.squat:
+          final prev = _squatResult;
           _squatResult = _squatAnalyzer.update(_pose!);
+
           if (_squatResult.repJustCompleted) {
             _audioPlayer.play(AssetSource('assets/correct.m4a'));
           }
+          if (prev.stage == SquatStage.descending &&
+              _squatResult.stage == SquatStage.standing) {
+            _audioPlayer.play(AssetSource('assets/incorrect.mp3'));
+          }
 
-        case Exercise.plank:
-          final prev2 = _plankResult;
+        case CameraExercise.plank:
+          final prev = _plankResult;
           _plankResult = _plankAnalyzer.update(_pose!);
-          if (prev2.stage == PlankStage.holding &&
+
+          if (_plankResult.holdJustStarted) {
+            _audioPlayer.play(AssetSource('assets/correct.m4a'));
+          }
+          if (prev.stage == PlankStage.holding &&
               _plankResult.stage == PlankStage.notReady) {
             _audioPlayer.play(AssetSource('assets/incorrect.mp3'));
           }
@@ -153,81 +157,57 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
-  void _switchExercise(Exercise exercise) {
-    if (_exercise == exercise) return;
-    _squatAnalyzer.reset();
-    _plankAnalyzer.reset();
-    setState(() => _exercise = exercise);
-  }
-
+// Build
   @override
   Widget build(BuildContext context) {
     if (!_cameraReady || _camera == null) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+      return const ColoredBox(
+        color: Colors.black,
+        child: Center(child: CircularProgressIndicator(color: Colors.white)),
       );
     }
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          CameraPreview(_camera!),
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        CameraPreview(_camera!),
 
-          ValueListenableBuilder<int>(
-            valueListenable: _notifier,
-            builder: (context, _, __) => Stack(
-              fit: StackFit.expand,
-              children: [
-                if (_pose != null)
-                  LayoutBuilder(
-                    builder: (_, constraints) => CustomPaint(
-                      painter: PosePainter(
-                        pose: _pose!,
-                        imageSize: _imageSize,
-                        screenSize: Size(
-                          constraints.maxWidth,
-                          constraints.maxHeight,
-                        ),
-                        minConfidence: SquatAnalyzer.minConfidence,
+        ValueListenableBuilder<int>(
+          valueListenable: _notifier,
+          builder: (context, _, __) => Stack(
+            fit: StackFit.expand,
+            children: [
+              if (_pose != null)
+                LayoutBuilder(
+                  builder: (_, constraints) => CustomPaint(
+                    painter: PosePainter(
+                      pose: _pose!,
+                      imageSize: _imageSize,
+                      screenSize: Size(
+                        constraints.maxWidth,
+                        constraints.maxHeight,
                       ),
-                    ),
-                  ),
-
-                // Stats HUD at the bottom
-                Positioned(
-                  bottom: 40,
-                  left: 20,
-                  right: 20,
-                  child: _exercise == Exercise.squat
-                      ? _SquatHud(result: _squatResult)
-                      : _PlankHud(result: _plankResult),
-                ),
-
-                SafeArea(
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 12),
-                      child: _ExerciseToggle(
-                        current: _exercise,
-                        onSelect: _switchExercise,
-                      ),
+                      minConfidence: SquatAnalyzer.minConfidence,
                     ),
                   ),
                 ),
-              ],
-            ),
+
+              Positioned(
+                bottom: 20,
+                left: 20,
+                right: 20,
+                child: widget.exercise == CameraExercise.squat
+                    ? _SquatHud(result: _squatResult)
+                    : _PlankHud(result: _plankResult),
+              ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
 
-// knee angle and reps
 
 class _SquatHud extends StatelessWidget {
   final SquatResult result;
@@ -243,16 +223,12 @@ class _SquatHud extends StatelessWidget {
           label: 'KNEE ANGLE',
           value: ready ? '${result.kneeAngle.toInt()}°' : '--',
         ),
-        _StatCard(
-          label: 'REPS',
-          value: '${result.reps}',
-        ),
+        _StatCard(label: 'REPS', value: '${result.reps}'),
       ],
     );
   }
 }
 
-//body angle
 class _PlankHud extends StatelessWidget {
   final PlankResult result;
   const _PlankHud({required this.result});
@@ -260,8 +236,6 @@ class _PlankHud extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final holding = result.stage == PlankStage.holding;
-    final seconds = result.holdDuration.inSeconds;
-
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
@@ -273,51 +247,9 @@ class _PlankHud extends StatelessWidget {
         ),
         _StatCard(
           label: 'HOLD',
-          value: holding ? '${seconds}s' : '--',
+          value: holding ? '${result.holdDuration.inSeconds}s' : '--',
         ),
       ],
-    );
-  }
-}
-
-class _ExerciseToggle extends StatelessWidget {
-  final Exercise           current;
-  final ValueChanged<Exercise> onSelect;
-
-  const _ExerciseToggle({required this.current, required this.onSelect});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: Exercise.values.map((ex) {
-        final selected = current == ex;
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6),
-          child: GestureDetector(
-            onTap: () => onSelect(ex),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 10),
-              decoration: BoxDecoration(
-                color: selected ? Colors.white : Colors.black.withOpacity(0.60),
-                borderRadius: BorderRadius.circular(30),
-                border: Border.all(
-                    color: selected ? Colors.white : Colors.white38),
-              ),
-              child: Text(
-                ex.name.toUpperCase(),
-                style: TextStyle(
-                  color: selected ? Colors.black : Colors.white70,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  letterSpacing: 1.2,
-                ),
-              ),
-            ),
-          ),
-        );
-      }).toList(),
     );
   }
 }
@@ -325,7 +257,6 @@ class _ExerciseToggle extends StatelessWidget {
 class _StatCard extends StatelessWidget {
   final String label;
   final String value;
-
   const _StatCard({required this.label, required this.value});
 
   @override
@@ -340,23 +271,15 @@ class _StatCard extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white54,
-              fontSize: 11,
-              letterSpacing: 1.4,
-            ),
-          ),
+          Text(label,
+              style: const TextStyle(
+                  color: Colors.white54, fontSize: 11, letterSpacing: 1.4)),
           const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Text(value,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold)),
         ],
       ),
     );

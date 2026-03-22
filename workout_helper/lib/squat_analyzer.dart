@@ -8,7 +8,7 @@ enum SquatStage {
   notReady,    // landmarks not visible or confidence too low
   standing,    // upright — angle >= standAngle
   descending,  // angle dropping from standing
-  bottom,      // angle <= bottomAngle — squat confirmed
+  bottom,      // angle <= bottomAngle, squat confirmed
   ascending,   // rising back up after confirmed squat
 }
 
