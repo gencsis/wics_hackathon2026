@@ -12,10 +12,26 @@ class MockData {
     'Arm Circle',
   ];
 
+  static final List<String> allBadges = [
+
+    'plank20.png',
+    'plank50.png',
+    'plank100.png',
+    'squat20.png',
+    'squat50.png',
+    'squat100.png',
+    'toe_touch20.png',
+    'toe_touch50.png',
+    'toe_touch100.png',
+    'cobra20.png',
+    'cobra50.png',
+    'cobra100.png',
+  ];
   static final List<String> earnedBadges = [
-    'Squat Starter',
-    'Plank Pro',
-    'Toe Stretch',
+    'squat20.png',
+    'plank20.png',
+    'toe_touch20.png',
+    'cobra20.png',
   ];
 
   static final List<String> sports = [
@@ -36,7 +52,7 @@ class MockData {
       imagePath: 'assets/images/squat_cat.png',
       gifPath: 'assets/images/squat_cat.gif',
       sports: ['Soccer', 'Basketball', 'Running'],
-      badgeName: 'Squat Starter',
+      badgeName: 'squat20.png',
     ),
     Exercise(
       title: 'Plank',
@@ -46,7 +62,7 @@ class MockData {
       imagePath: 'assets/images/plank_cat.png',
       gifPath: 'assets/images/plank_cat.gif',
       sports: ['Soccer', 'Running'],
-      badgeName: 'Plank Pro',
+      badgeName: 'plank20.png',
     ),
     Exercise(
       title: 'Toe Stretch',
@@ -54,9 +70,9 @@ class MockData {
       mode: ExerciseMode.counted,
       tutorialText: 'Reach for your toes slowly without locking your knees.',
       imagePath: '',
-      gifPath: '',
+      gifPath: 'assets/images/toe_cat.gif',
       sports: ['Running', 'Other'],
-      badgeName: 'Toe Stretch',
+      badgeName: 'toe_touch20.png',
     ),
     Exercise(
       title: 'Arm Circle',
@@ -106,7 +122,7 @@ class MockData {
       imagePath: 'assets/images/cobra_stretch.png',
       gifPath: 'assets/images/cobra_stretch.gif',
       sports: ['Running', 'Other'],
-      badgeName: 'Cobra Flex',
+      badgeName: 'cobra20.png',
     ),
   ];
 }

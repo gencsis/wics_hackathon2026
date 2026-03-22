@@ -331,7 +331,7 @@ class _BadgeGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GridView.builder(
-      itemCount: 9,
+      itemCount: MockData.allBadges.length,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -340,17 +340,48 @@ class _BadgeGrid extends StatelessWidget {
         crossAxisSpacing: 14,
       ),
       itemBuilder: (context, index) {
-        final unlocked = index < badges.length;
+        final badge = MockData.allBadges[index];
+        final isUnlocked = badges.contains(badge);
 
         return Container(
           decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: unlocked ? AppColors.primary : AppColors.accentLight,
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppColors.cardBorder),
           ),
-          child: Icon(
-            unlocked ? Icons.emoji_events_rounded : Icons.lock_outline_rounded,
-            color: unlocked ? Colors.white : AppColors.primaryDark,
+          child: Stack(
+            children: [
+              // Badge Image
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.asset(
+                  'assets/images/$badge',
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  height: double.infinity,
+                  color: isUnlocked ? null : const Color.fromARGB(255, 238, 187, 140),
+                  colorBlendMode:
+                      isUnlocked ? null : BlendMode.saturation,
+                ),
+              ),
+
+              // Lock overlay
+              if (!isUnlocked)
+              //blur affect
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    color: const Color.fromARGB(255, 10, 35, 55).withOpacity(0.35),
+                  ),
+                ),
+              if (!isUnlocked)
+                const Center(
+                  child: Icon(
+                    Icons.lock,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
+            ],
           ),
         );
       },
