@@ -73,11 +73,11 @@ class _ExerciseDetailScreenState extends State<ExerciseDetailScreen> {
                         width: 2,
                       ),
                     ),
-                    child: widget.exercise.imagePath.isNotEmpty
+                    child: widget.exercise.gifPath.isNotEmpty
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(18),
                             child: Image.asset(
-                              widget.exercise.imagePath,
+                              widget.exercise.gifPath,
                               fit: BoxFit.contain,
                             ),
                           )
