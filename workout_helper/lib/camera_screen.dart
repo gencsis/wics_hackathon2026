@@ -85,7 +85,7 @@ class _CameraScreenState extends State<CameraScreen> {
 
     _camera = CameraController(
       cam,
-      ResolutionPreset.medium,
+      ResolutionPreset.high,
       enableAudio: false,
       imageFormatGroup:
       Platform.isIOS ? ImageFormatGroup.bgra8888 : ImageFormatGroup.nv21,
