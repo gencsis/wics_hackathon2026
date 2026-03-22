@@ -12,6 +12,7 @@ An exercise app for beginners whose hobby is exercising and want help without ha
 ## Platforms Tested on
 - Android
 - Chrome
+- iOS
 
 # Important Link
 Designs: https://www.figma.com/design/a6jJmbRfVSnIFzkfcYCE3E/Cathlete?node-id=38-20&t=YUSQ7OafgMLpfk8r-0
