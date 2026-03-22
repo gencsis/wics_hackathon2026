@@ -3,6 +3,7 @@ import 'mock_data.dart';
 import 'app_colors.dart';
 import 'exercise_list_screen.dart';
 import 'recents_screen.dart';
+import 'dart:ui';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -363,7 +364,17 @@ class _BadgeGrid extends StatelessWidget {
                       isUnlocked ? null : BlendMode.saturation,
                 ),
               ),
-
+              //blur effect
+              if (!isUnlocked)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                    child: Container(
+                      color: Colors.blue.withOpacity(0.3),
+                    ),
+                  ),
+                ),
               // Lock overlay
               if (!isUnlocked)
               //blur affect

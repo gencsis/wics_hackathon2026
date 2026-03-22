@@ -69,10 +69,20 @@ class MockData {
       type: 'stretch',
       mode: ExerciseMode.counted,
       tutorialText: 'Reach for your toes slowly without locking your knees.',
-      imagePath: '',
+      imagePath: 'assets/images/toe_cat.png',
       gifPath: 'assets/images/toe_cat.gif',
       sports: ['Running', 'Other'],
       badgeName: 'toe_touch20.png',
+    ),    
+    Exercise(
+      title: 'Cobra Stretch',
+      type: 'stretch',
+      mode: ExerciseMode.counted,
+      tutorialText: 'Lie on your stomach, place your hands under your shoulders, and gently push your chest upward while keeping your hips on the ground.',
+      imagePath: 'assets/images/cobra_stretch.png',
+      gifPath: 'assets/images/cobra_stretch.gif',
+      sports: ['Running', 'Other'],
+      badgeName: 'cobra20.png',
     ),
     Exercise(
       title: 'Arm Circle',
@@ -114,15 +124,6 @@ class MockData {
       sports: ['Baseball'],
       badgeName: 'Shoulder Saver',
     ),
-    Exercise(
-      title: 'Cobra Stretch',
-      type: 'stretch',
-      mode: ExerciseMode.counted,
-      tutorialText: 'Lie on your stomach, place your hands under your shoulders, and gently push your chest upward while keeping your hips on the ground.',
-      imagePath: 'assets/images/cobra_stretch.png',
-      gifPath: 'assets/images/cobra_stretch.gif',
-      sports: ['Running', 'Other'],
-      badgeName: 'cobra20.png',
-    ),
+
   ];
 }
