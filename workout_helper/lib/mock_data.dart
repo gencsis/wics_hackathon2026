@@ -110,7 +110,7 @@ class MockData {
       mode: ExerciseMode.counted,
       tutorialText: 'Land softly and keep your core engaged.',
       imagePath: 'assets/images/jumps_cat.png',
-      gifPath: '',
+      gifPath: 'assets/images/jumps_cat.gif',
       sports: ['Basketball'],
       badgeName: 'Jump Jet',
     ),
