@@ -148,70 +148,8 @@ class _WorkoutSessionScreenState extends State<WorkoutSessionScreen> {
 
             const SizedBox(height: 20),
 
-            Container(
-              width: double.infinity,
-              padding:
-              const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: AppColors.cardBorder),
-                boxShadow: const [
-                  BoxShadow(
-                    color: AppColors.shadow,
-                    blurRadius: 10,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    isTimed ? 'CURRENT TIME' : 'CURRENT COUNT',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.6,
-                      color: AppColors.textLight,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    isTimed ? '$currentValue sec' : '$currentValue reps',
-                    style: const TextStyle(
-                      fontSize: 34,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                ],
-              ),
-            ),
 
             const SizedBox(height: 16),
-
-            if (!isTimed) ...[
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 17),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                  ),
-                  onPressed: _incrementCount,
-                  child: const Text(
-                    'ADD REP',
-                    style: TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 10),
-            ],
 
             SizedBox(
               width: double.infinity,
